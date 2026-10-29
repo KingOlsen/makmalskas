@@ -1,0 +1,625 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Computer Lab Booking</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a two-pane workbench. Left, the booking form. Right, the chosen day drawn to scale
+   on an 08:00-20:00 strip with the list of bookings under it. Stacks to one column on phones. */
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --surface-2:#F3F6F8; --ink:#101C26; --muted:#566673; --line:#D3DCE2;
+  --accent:#2748C9; --accent-ink:#FFFFFF; --accent-soft:#E3E9FB;
+  --ok:#17744A; --ok-soft:#DDF1E6; --bad:#B5302A; --bad-soft:#FBE4E2; --on-bad:#FFFFFF;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141A; --surface:#151F27; --surface-2:#1B2731; --ink:#E7EEF3; --muted:#93A4B0; --line:#2A3945;
+    --accent:#8CA2FF; --accent-ink:#0D141A; --accent-soft:#1F2B52;
+    --ok:#5FD39A; --ok-soft:#14352A; --bad:#FF8A82; --bad-soft:#3C1B19; --on-bad:#1A0B0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141A; --surface:#151F27; --surface-2:#1B2731; --ink:#E7EEF3; --muted:#93A4B0; --line:#2A3945;
+  --accent:#8CA2FF; --accent-ink:#0D141A; --accent-soft:#1F2B52;
+  --ok:#5FD39A; --ok-soft:#14352A; --bad:#FF8A82; --bad-soft:#3C1B19; --on-bad:#1A0B0A;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font:15px/1.45 var(--f-body);
+  padding-block:20px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px 24px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;color:var(--accent);min-width:0}
+h1{font:700 26px/1.1 var(--f-display);margin:0;color:var(--ink);letter-spacing:-.01em;text-wrap:balance}
+h2{font:600 19px/1.2 var(--f-display);margin:0;text-wrap:balance}
+.clock{font:500 13px var(--f-mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.clock b{color:var(--ink);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr);gap:20px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 4px}
+
+form{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+select,input[type=text],input[type=date]{
+  width:100%;height:42px;padding:0 10px;border:1px solid var(--line);border-radius:6px;
+  background:var(--surface);color:var(--ink);font:inherit;
+}
+select:disabled,input:disabled{opacity:.55}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.addrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.addrow input{flex:1 1 140px;min-width:0}
+.btn{height:42px;padding:0 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:var(--on-bad)}
+.btn.xs{height:32px;padding:0 12px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{margin:0;padding:10px 12px;border-radius:6px;font-size:14px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);min-height:44px}
+.status.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.status.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+
+.sched-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.muted{background:var(--surface-2);color:var(--muted)}
+.tl{margin:18px 0 0}
+.strip{
+  position:relative;height:44px;border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  background-color:var(--surface-2);
+  background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);
+  background-size:calc(100% / 12) 100%;
+}
+.blk{position:absolute;top:6px;bottom:6px;background:var(--accent);border-radius:3px}
+.blk.past{opacity:.35}
+.ghost{position:absolute;top:3px;bottom:3px;border:2px dashed var(--ok);background:var(--ok-soft);border-radius:4px;opacity:.9}
+.ghost.bad{border-color:var(--bad);background:var(--bad-soft)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.ticks{position:relative;height:18px;margin-top:4px;font:500 11px var(--f-mono);color:var(--muted)}
+.ticks span{position:absolute;top:0;transform:translateX(-50%)}
+.ticks span:first-child{transform:none}
+.ticks span:last-child{transform:translateX(-100%)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.legend .k-book{background:var(--accent)}
+.legend .k-sel{border:2px dashed var(--ok);background:var(--ok-soft)}
+.legend .k-now{background:var(--bad);width:3px}
+
+.list{list-style:none;margin:14px 0 0;padding:0}
+.row{display:grid;grid-template-columns:9rem minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.tcol{display:flex;flex-direction:column;gap:2px}
+.time{font:600 15px var(--f-mono);font-variant-numeric:tabular-nums}
+.dur{font:500 12px var(--f-mono);color:var(--muted)}
+.info{display:flex;flex-direction:column;min-width:0}
+.cls{font-weight:600;overflow-wrap:anywhere}
+.who{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.empty{padding:16px 0 4px;color:var(--muted);border-top:1px solid var(--line)}
+.foot{margin:0;font-size:12px;color:var(--muted)}
+
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){
+  .row{grid-template-columns:minmax(0,1fr) auto}
+  .tcol{grid-column:1/-1;flex-direction:row;gap:10px;align-items:baseline}
+  .panel{padding:16px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20.5h8M12 16.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <h1>Computer Lab Booking</h1>
+    </div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <main class="grid">
+    <section class="panel" aria-labelledby="formTitle">
+      <p class="eyebrow">Reserve the lab</p>
+      <h2 id="formTitle">New booking</h2>
+      <form id="bookForm" novalidate>
+        <div class="field">
+          <label for="userSel">Name</label>
+          <select id="userSel"></select>
+          <div class="addrow" id="userAdd" hidden>
+            <input type="text" id="userNew" maxlength="60" placeholder="Full name" autocomplete="off" aria-label="New name">
+            <button type="button" class="btn" id="userAddBtn">Add</button>
+            <button type="button" class="btn" id="userCancel">Cancel</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="classSel">Class</label>
+          <select id="classSel"></select>
+          <div class="addrow" id="classAdd" hidden>
+            <input type="text" id="classNew" maxlength="60" placeholder="Class name, e.g. 4 Bestari" autocomplete="off" aria-label="New class name">
+            <button type="button" class="btn" id="classAddBtn">Add</button>
+            <button type="button" class="btn" id="classCancel">Cancel</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="dateIn">Date</label>
+          <input type="date" id="dateIn">
+        </div>
+        <div class="pair">
+          <div class="field"><label for="startSel">Start</label><select id="startSel"></select></div>
+          <div class="field"><label for="endSel">End</label><select id="endSel"></select></div>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <button type="submit" class="btn primary" id="bookBtn">Book lab</button>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="listTitle">
+      <div class="sched-head">
+        <div>
+          <p class="eyebrow">Bookings</p>
+          <h2 id="listTitle"></h2>
+          <p class="sub" id="listSub"></p>
+        </div>
+        <div>
+          <span class="pill" id="todayTag">Today</span>
+          <button type="button" class="btn xs" id="todayBtn" hidden>Back to today</button>
+        </div>
+      </div>
+      <div class="tl">
+        <div class="strip" id="strip" role="img"></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="k-book"></i>Booked</span>
+          <span><i class="k-sel"></i>Your selection</span>
+          <span><i class="k-now"></i>Now</span>
+        </div>
+      </div>
+      <ol class="list" id="list"></ol>
+    </section>
+  </main>
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var OPEN = 8 * 60, CLOSE = 20 * 60, STEP = 30;   // lab hours 08:00-20:00, 30-minute steps
+
+  var $ = function (id) { return document.getElementById(id); };
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var toMin = function (t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; };
+  var toTime = function (m) { return pad(Math.floor(m / 60)) + ':' + pad(m % 60); };
+  var dateStr = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var today = function () { return dateStr(new Date()); };
+  var nowMin = function () { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+  function parseDate(s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function fmtLong(s) { return parseDate(s).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
+  function fmtDur(min) {
+    var h = Math.floor(min / 60), m = min % 60;
+    return ((h ? h + 'h' : '') + (h && m ? ' ' : '') + (m ? m + 'm' : '')) || '0m';
+  }
+  function slug(s) {
+    var t = s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (!t) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; t = 'x' + (h >>> 0).toString(36); }
+    return t.slice(0, 80);
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  var byName = function (a, b) { return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }); };
+  function findClash(list, b) {
+    return list.find(function (x) { return x.date === b.date && b.start < x.end && b.end > x.start; });
+  }
+
+  var state = { users: [], classes: [], bookings: [], mode: 'pending', canWrite: true, error: null };
+  var form = { userId: '', classId: '', date: today(), start: toTime(OPEN), end: toTime(OPEN + 60), addUser: false, addClass: false };
+  var flash = null, flashT = 0, pendingCancel = null, cancelT = 0, busy = false, backend = null;
+
+  function dayBookings(date) {
+    return state.bookings.filter(function (b) { return b.date === date; })
+      .sort(function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
+  }
+
+  /* ---------- storage: shared (db) or this device only ---------- */
+  var Local = {
+    key: 'labbook-v1',
+    load: function () {
+      try {
+        var v = JSON.parse(localStorage.getItem(this.key) || 'null');
+        if (v) { state.users = v.users || []; state.classes = v.classes || []; state.bookings = v.bookings || []; }
+      } catch (e) {}
+    },
+    save: function () {
+      try { localStorage.setItem(this.key, JSON.stringify({ users: state.users, classes: state.classes, bookings: state.bookings })); } catch (e) {}
+    },
+    addUser: function () { this.save(); return Promise.resolve(); },
+    addClass: function () { this.save(); return Promise.resolve(); },
+    tryBook: function (b) {
+      var c = findClash(state.bookings, b);
+      if (c) return Promise.resolve({ ok: false, clash: c });
+      state.bookings.push(Object.assign({ id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }, b));
+      this.save();
+      return Promise.resolve({ ok: true });
+    },
+    cancel: function (id) {
+      state.bookings = state.bookings.filter(function (x) { return x.id !== id; });
+      this.save();
+      return Promise.resolve();
+    }
+  };
+
+  function makeDb(db) {
+    var tab = Math.random().toString(36).slice(2);
+    var mapDocs = function (s) { return s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); };
+    var onErr = function (e) { state.error = (e && e.code) || 'unavailable'; render(); };
+    db.collection('users').onSnapshot(function (s) { state.users = mapDocs(s); render(); }, onErr);
+    db.collection('classes').onSnapshot(function (s) { state.classes = mapDocs(s); render(); }, onErr);
+    db.collection('bookings').where('date', '>=', today()).onSnapshot(function (s) { state.bookings = mapDocs(s); render(); }, onErr);
+    return {
+      addUser: function (u) { return db.doc('users/' + u.id).set({ name: u.name }); },
+      addClass: function (c) { return db.doc('classes/' + c.id).set({ name: c.name }); },
+      // A short lease on the day stops two people booking the same slot at the same moment.
+      tryBook: async function (b) {
+        var lock = db.doc('locks/' + b.date);
+        for (var i = 0; i < 5; i++) {
+          var r = await lock.acquire({ holder: tab, ttlMs: 6000 });
+          if (r.acquired) {
+            var snap = await db.collection('bookings').where('date', '==', b.date).get();
+            var clash = findClash(snap.docs.map(function (d) { return d.data(); }), b);
+            if (clash) return { ok: false, clash: clash };
+            await db.collection('bookings').add(b);
+            return { ok: true };
+          }
+          await sleep(350 + Math.random() * 450);
+        }
+        return { ok: false, busy: true };
+      },
+      cancel: function (id) { return db.doc('bookings/' + id).delete(); }
+    };
+  }
+
+  /* ---------- status ---------- */
+  function evaluate() {
+    var b = { date: form.date, start: form.start, end: form.end };
+    if (state.mode === 'pending') return { kind: '', msg: 'Connecting to the booking sheet…', ok: false };
+    if (state.error) return { kind: 'bad', msg: 'The shared bookings cannot be reached. Reload this page to continue.', ok: false };
+    if (!state.canWrite) return { kind: '', msg: 'You can view bookings here but not make them.', ok: false };
+    if (form.date < today()) return { kind: 'bad', msg: 'That date has passed. Pick today or a later date.', ok: false };
+    if (form.date === today() && toMin(form.end) <= nowMin()) return { kind: 'bad', msg: 'That time has already passed today.', ok: false };
+    var clash = findClash(dayBookings(form.date), b);
+    if (clash) return { kind: 'bad', clash: clash, ok: false,
+      msg: 'Clash: ' + clash.className + ' has the lab from ' + clash.start + ' to ' + clash.end + ' (booked by ' + clash.userName + '). Pick another time.' };
+    if (form.addUser) return { kind: '', msg: 'Type the new name and press Add.', ok: false };
+    if (form.addClass) return { kind: '', msg: 'Type the new class and press Add.', ok: false };
+    if (!form.userId || !state.users.some(function (x) { return x.id === form.userId; })) return { kind: '', msg: 'Choose your name, or add it if you are new.', ok: false };
+    if (!form.classId || !state.classes.some(function (x) { return x.id === form.classId; })) return { kind: '', msg: 'Choose a class, or add a new one.', ok: false };
+    return { kind: 'ok', msg: 'Free: the lab is available from ' + b.start + ' to ' + b.end + '.', ok: true };
+  }
+
+  function setFlash(msg, kind) {
+    flash = { msg: msg, kind: kind };
+    clearTimeout(flashT);
+    flashT = setTimeout(function () { flash = null; renderStatus(evaluate()); }, 6000);
+  }
+  function touch() { flash = null; }
+
+  /* ---------- rendering ---------- */
+  function renderClock() {
+    var d = new Date();
+    var c = $('clock');
+    c.textContent = '';
+    c.append(d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + '  ', el('b', '', pad(d.getHours()) + ':' + pad(d.getMinutes())));
+  }
+
+  function fillSelect(sel, items, noun, value, adding) {
+    var sig = items.map(function (i) { return i.id + '|' + i.name; }).join('\n');
+    if (sel._sig !== sig) {
+      sel._sig = sig;
+      sel.textContent = '';
+      sel.add(new Option(items.length ? 'Select a ' + noun + '…' : 'No ' + noun + 's yet', ''));
+      items.slice().sort(byName).forEach(function (i) { sel.add(new Option(i.name, i.id)); });
+      sel.add(new Option('+ Add new ' + noun + '…', '__new__'));
+    }
+    sel.value = adding ? '__new__' : value;
+    if (sel.value !== (adding ? '__new__' : value)) sel.value = '';
+  }
+
+  function renderSelects() {
+    fillSelect($('userSel'), state.users, 'name', form.userId, form.addUser);
+    fillSelect($('classSel'), state.classes, 'class', form.classId, form.addClass);
+    $('userAdd').hidden = !form.addUser;
+    $('classAdd').hidden = !form.addClass;
+  }
+
+  function renderControls(ev) {
+    var lock = state.mode === 'pending' || !state.canWrite || !!state.error;
+    ['userSel', 'classSel', 'startSel', 'endSel', 'userNew', 'classNew', 'userAddBtn', 'classAddBtn', 'userCancel', 'classCancel']
+      .forEach(function (id) { $(id).disabled = lock; });
+    var d = $('dateIn');
+    d.min = today();
+    if (d.value !== form.date) d.value = form.date;
+    var btn = $('bookBtn');
+    btn.disabled = busy || !ev.ok;
+    btn.textContent = busy ? 'Booking…' : 'Book lab';
+    var isToday = form.date === today();
+    $('todayTag').hidden = !isToday;
+    $('todayBtn').hidden = isToday;
+  }
+
+  function renderStatus(ev) {
+    var s = flash || ev;
+    var node = $('status');
+    node.className = 'status ' + (s.kind || '');
+    node.textContent = s.msg;
+  }
+
+  function renderStrip(ev) {
+    var strip = $('strip');
+    strip.textContent = '';
+    var list = dayBookings(form.date);
+    var isToday = form.date === today();
+    var n = nowMin();
+    var pos = function (m) { return (m - OPEN) / (CLOSE - OPEN) * 100; };
+    list.forEach(function (b) {
+      var e = el('div', 'blk' + (isToday && toMin(b.end) <= n ? ' past' : ''));
+      var l = pos(toMin(b.start));
+      e.style.left = l + '%';
+      e.style.width = (pos(toMin(b.end)) - l) + '%';
+      e.title = b.start + '–' + b.end + '  ' + b.className + ', ' + b.userName;
+      strip.appendChild(e);
+    });
+    if (form.date >= today() && state.mode !== 'pending') {
+      var g = el('div', 'ghost' + (ev.clash ? ' bad' : ''));
+      var gl = pos(toMin(form.start));
+      g.style.left = gl + '%';
+      g.style.width = (pos(toMin(form.end)) - gl) + '%';
+      strip.appendChild(g);
+    }
+    if (isToday && n >= OPEN && n <= CLOSE) {
+      var nl = el('div', 'nowline');
+      nl.style.left = 'calc(' + pos(n) + '% - 1px)';
+      strip.appendChild(nl);
+    }
+    var total = list.reduce(function (a, b) { return a + toMin(b.end) - toMin(b.start); }, 0);
+    strip.setAttribute('aria-label', 'Lab timeline from ' + toTime(OPEN) + ' to ' + toTime(CLOSE) + ': ' + list.length + ' booking' + (list.length === 1 ? '' : 's') + ', ' + fmtDur(total) + ' booked.');
+  }
+
+  function renderList() {
+    var ol = $('list');
+    ol.textContent = '';
+    var list = dayBookings(form.date);
+    var isToday = form.date === today();
+    var n = nowMin();
+    $('listTitle').textContent = fmtLong(form.date);
+    var total = list.reduce(function (a, b) { return a + toMin(b.end) - toMin(b.start); }, 0);
+    $('listSub').textContent = list.length
+      ? list.length + ' booking' + (list.length === 1 ? '' : 's') + ', ' + fmtDur(total) + ' of ' + fmtDur(CLOSE - OPEN) + ' booked'
+      : 'Nothing booked yet';
+    if (!list.length) {
+      ol.appendChild(el('li', 'empty', 'No bookings on this day. The lab is open ' + toTime(OPEN) + ' to ' + toTime(CLOSE) + ' and free to book.'));
+      return;
+    }
+    list.forEach(function (b) {
+      var li = el('li', 'row');
+      var t = el('div', 'tcol');
+      t.append(el('span', 'time', b.start + '–' + b.end), el('span', 'dur', fmtDur(toMin(b.end) - toMin(b.start))));
+      var info = el('div', 'info');
+      info.append(el('span', 'cls', b.className), el('span', 'who', b.userName));
+      var act = el('div', 'act');
+      if (isToday) {
+        if (toMin(b.start) <= n && n < toMin(b.end)) act.appendChild(el('span', 'pill', 'In use now'));
+        else if (toMin(b.end) <= n) act.appendChild(el('span', 'pill muted', 'Finished'));
+      }
+      if (state.canWrite && !state.error) {
+        if (pendingCancel === b.id) {
+          var yes = el('button', 'btn xs danger', 'Confirm cancel');
+          yes.type = 'button';
+          yes.addEventListener('click', function () { doCancel(b.id); });
+          var no = el('button', 'btn xs', 'Keep');
+          no.type = 'button';
+          no.addEventListener('click', function () { pendingCancel = null; renderList(); });
+          act.append(yes, no);
+        } else {
+          var c = el('button', 'btn xs', 'Cancel');
+          c.type = 'button';
+          c.setAttribute('aria-label', 'Cancel booking for ' + b.className + ' at ' + b.start);
+          c.addEventListener('click', function () {
+            pendingCancel = b.id;
+            clearTimeout(cancelT);
+            cancelT = setTimeout(function () { pendingCancel = null; renderList(); }, 5000);
+            renderList();
+          });
+          act.appendChild(c);
+        }
+      }
+      li.append(t, info, act);
+      ol.appendChild(li);
+    });
+  }
+
+  function renderFoot() {
+    var f = $('foot');
+    if (state.mode === 'shared') f.textContent = 'Everyone who opens this page sees the same bookings, updated live.';
+    else if (state.mode === 'local') f.textContent = 'Shared storage is not available here, so bookings are kept on this device only.';
+    else f.textContent = '';
+  }
+
+  function render() {
+    var ev = evaluate();
+    renderClock();
+    renderSelects();
+    renderControls(ev);
+    renderStrip(ev);
+    renderList();
+    renderStatus(ev);
+    renderFoot();
+  }
+
+  /* ---------- actions ---------- */
+  function syncEnd() {
+    var endSel = $('endSel'), s = toMin(form.start);
+    endSel.textContent = '';
+    for (var m = s + STEP; m <= CLOSE; m += STEP) endSel.add(new Option(toTime(m), toTime(m)));
+    if (toMin(form.end) <= s || toMin(form.end) > CLOSE) form.end = toTime(Math.min(s + 60, CLOSE));
+    endSel.value = form.end;
+  }
+
+  async function addEntity(kind) {
+    var input = $(kind + 'New');
+    var name = input.value.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!name) { input.focus(); return; }
+    var isUser = kind === 'user';
+    var list = isUser ? state.users : state.classes;
+    var id = (isUser ? 'u-' : 'c-') + slug(name);
+    var existing = list.some(function (x) { return x.id === id; });
+    touch();
+    if (!existing) list.push({ id: id, name: name });
+    form[kind + 'Id'] = id;
+    form[isUser ? 'addUser' : 'addClass'] = false;
+    input.value = '';
+    if (isUser) { try { localStorage.setItem('lab.user', id); } catch (e) {} }
+    render();
+    if (existing) return;
+    try {
+      await (isUser ? backend.addUser({ id: id, name: name }) : backend.addClass({ id: id, name: name }));
+    } catch (e) {
+      var idx = list.findIndex(function (x) { return x.id === id; });
+      if (idx >= 0) list.splice(idx, 1);
+      if (form[kind + 'Id'] === id) form[kind + 'Id'] = '';
+      setFlash('Could not save the new ' + (isUser ? 'name' : 'class') + '. Check your connection and try again.', 'bad');
+      render();
+    }
+  }
+
+  async function book(e) {
+    e.preventDefault();
+    var ev = evaluate();
+    if (busy || !ev.ok) return;
+    var u = state.users.find(function (x) { return x.id === form.userId; });
+    var c = state.classes.find(function (x) { return x.id === form.classId; });
+    if (!u || !c) return;
+    var b = { date: form.date, start: form.start, end: form.end, userId: u.id, userName: u.name, classId: c.id, className: c.name, createdAt: new Date().toISOString() };
+    busy = true;
+    render();
+    try {
+      var r = await backend.tryBook(b);
+      if (r.ok) {
+        setFlash('Booked ' + c.name + ' on ' + parseDate(b.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + b.start + ' to ' + b.end + '.', 'ok');
+        form.start = toMin(b.end) >= CLOSE ? toTime(OPEN) : b.end;
+        $('startSel').value = form.start;
+        syncEnd();
+      } else if (r.clash) {
+        setFlash('Someone just booked that time: ' + r.clash.className + ', ' + r.clash.start + ' to ' + r.clash.end + '. Pick another time.', 'bad');
+      } else {
+        setFlash('Someone else is booking this day right now. Try again in a moment.', 'bad');
+      }
+    } catch (err) {
+      setFlash('Could not save the booking. Check your connection and try again.', 'bad');
+    }
+    busy = false;
+    render();
+  }
+
+  async function doCancel(id) {
+    pendingCancel = null;
+    try { await backend.cancel(id); } catch (e) { setFlash('Could not cancel the booking. Try again.', 'bad'); }
+    render();
+  }
+
+  function onPick(kind) {
+    return function (ev) {
+      var v = ev.target.value, isUser = kind === 'user';
+      touch();
+      if (v === '__new__') {
+        form[isUser ? 'addUser' : 'addClass'] = true;
+        form[kind + 'Id'] = '';
+        render();
+        $(kind + 'New').focus();
+        return;
+      }
+      form[isUser ? 'addUser' : 'addClass'] = false;
+      form[kind + 'Id'] = v;
+      if (isUser) { try { localStorage.setItem('lab.user', v); } catch (e) {} }
+      render();
+    };
+  }
+
+  function wire() {
+    ['user', 'class'].forEach(function (kind) {
+      $(kind + 'Sel').addEventListener('change', onPick(kind));
+      $(kind + 'AddBtn').addEventListener('click', function () { addEntity(kind); });
+      $(kind + 'Cancel').addEventListener('click', function () {
+        form[kind === 'user' ? 'addUser' : 'addClass'] = false;
+        $(kind + 'New').value = '';
+        touch();
+        render();
+      });
+      $(kind + 'New').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); addEntity(kind); }
+        if (e.key === 'Escape') { $(kind + 'Cancel').click(); }
+      });
+    });
+    $('dateIn').addEventListener('change', function (e) {
+      touch();
+      form.date = e.target.value && e.target.value >= today() ? e.target.value : (e.target.value ? today() : form.date);
+      render();
+    });
+    $('todayBtn').addEventListener('click', function () { touch(); form.date = today(); render(); });
+    $('startSel').addEventListener('change', function (e) { touch(); form.start = e.target.value; syncEnd(); render(); });
+    $('endSel').addEventListener('change', function (e) { touch(); form.end = e.target.value; render(); });
+    $('bookForm').addEventListener('submit', book);
+  }
+
+  function buildStatic() {
+    var startSel = $('startSel');
+    for (var m = OPEN; m < CLOSE; m += STEP) startSel.add(new Option(toTime(m), toTime(m)));
+    startSel.value = form.start;
+    syncEnd();
+    var ticks = $('ticks');
+    for (var h = OPEN; h <= CLOSE; h += 120) {
+      var s = el('span', '', pad(h / 60));
+      s.style.left = ((h - OPEN) / (CLOSE - OPEN) * 100) + '%';
+      ticks.appendChild(s);
+    }
+  }
+
+  async function init() {
+    buildStatic();
+    wire();
+    render();
+    setInterval(function () { if (!busy) render(); }, 30000);
+    var db = null, user = null;
+    try {
+      if (window.claude && window.claude.use) {
+        var got = await Promise.all([
+          window.claude.use('db').catch(function () { return null; }),
+          window.claude.use('user').catch(function () { return null; })
+        ]);
+        db = got[0]; user = got[1];
+      }
+    } catch (e) {}
+    try {
+      if (user && user.can) { var c = await user.can('data.write'); if (c === false) state.canWrite = false; }
+    } catch (e) {}
+    if (db) { backend = makeDb(db); state.mode = 'shared'; }
+    else { Local.load(); backend = Local; state.mode = 'local'; }
+    try {
+      var saved = localStorage.getItem('lab.user');
+      if (saved && !form.userId) form.userId = saved;
+    } catch (e) {}
+    render();
+  }
+
+  init();
+})();
+</script>
+
+</body></html>
